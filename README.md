@@ -3,6 +3,7 @@
 # GuitarPro-to-USDB-format (https://wiki.usdb.eu/txt_files/format)
 
 This project uses GuitarPro-to-Midi and instead converting GuitarPro files to MIDI files it converts guitar pro files to usdb txt file for Karaoke.
+This can be used Vocaluxe or Ultrastar Deluxe.
 
 ## Features
 
