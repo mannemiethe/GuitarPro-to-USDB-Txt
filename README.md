@@ -1,8 +1,8 @@
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/rageagainsthepc/GuitarPro-to-Midi)
 
-# GuitarPro-to-Midi
+# GuitarPro-to-USDB-format (https://wiki.usdb.eu/txt_files/format)
 
-GuitarPro-to-Midi is a cross-platform command line application for converting GuitarPro files to MIDI files.
+This project uses GuitarPro-to-Midi and instead converting GuitarPro files to MIDI files it converts guitar pro files to usdb txt file for Karaoke.
 
 ## Features
 
