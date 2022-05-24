@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -109,7 +109,7 @@ public class GP6File : GPFile
                 int.Parse(nPageLayout.subnodes[6].content, CultureInfo.InvariantCulture));
             file.pageSetup.scoreSizeProportion = float.Parse(nPageLayout.subnodes[7].content, CultureInfo.InvariantCulture);
         }
-        file.lyrics = transferLyrics(node.getSubnodeByName("Tracks"));
+        file.lyrics = transferLyrics(node.getSubnodeByName("Tracks", true));
         //tempo, key, midiChannels, directions only on a per track / per measureHeader (MasterBar) basis
 
         file.measureCount = node.getSubnodeByName("MasterBars",true).subnodes.Count;
@@ -120,7 +120,10 @@ public class GP6File : GPFile
         {
             tempos.Add(new GP6Tempo(nAutomation));
         }
-
+        if (tempos != null && tempos.Count > 0)
+        {
+            file.tempo = tempos[0].tempo;
+        }
         file.measureHeaders = transferMeasureHeaders(node.getSubnodeByName("MasterBars"), file);
         file.tracks = transferTracks(node.getSubnodeByName("Tracks", true),file);
         rhythms = readRhythms(node.getSubnodeByName("Rhythms", true));
@@ -1030,8 +1033,9 @@ public class GP6File : GPFile
         if (nTracks == null) return ret_val;
         foreach (Node nTrack in nTracks.subnodes)
         {
-            Node nLyrics = nTrack.getSubnodeByName("Lyrics");
+            Node nLyrics = nTrack.getSubnodeByName("Lyrics", true);
             Lyrics lyrics = new Lyrics();
+            lyrics.trackChoice = currentTrack;
             int cnt = 0;
             foreach (Node nLine in nLyrics.subnodes)
             {

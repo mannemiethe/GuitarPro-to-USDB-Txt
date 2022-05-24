@@ -38,6 +38,10 @@ namespace GuitarProToMidi.Native
         private readonly List<BendPoint> _tremBarPoints = new();
         public int Velocity { get; set; } = 100;
 
+        public string noteText;
+
+        public int measureIndex;
+
         public Note(Note old)
         {
             Str = old.Str;
@@ -64,6 +68,8 @@ namespace GuitarProToMidi.Native
             Fading = old.Fading;
             IsRhTapped = old.IsRhTapped;
             ResizeValue = old.ResizeValue;
+            noteText = old.noteText;
+            measureIndex = old.measureIndex;
         }
 
         public Note()

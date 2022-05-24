@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GuitarProToMidi": {
+      "commandName": "Project",
+      "commandLineArgs": "asd2voice.gpx"
+    }
+  }
+}

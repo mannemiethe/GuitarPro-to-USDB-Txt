@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using MidiExport;
@@ -36,6 +36,56 @@ namespace GuitarProToMidi.Native
             UpdateAvailableChannels();
         }
 
+        public int getMidiAsSeconds(int midiTick, int bpm, int quarterTime)
+        {
+            return (int)Math.Round((60000.0f / (quarterTime * bpm)) * midiTick, MidpointRounding.ToNegativeInfinity); ;
+        }
+
+        public List<MidiExport.MidiTrack> getMidiTracksWithOnNode(int bpm, int quarterTime)
+        {
+            double ticks = quarterTime / 4;
+            var mid = ToMidi();
+            List<MidiExport.MidiTrack> midiNTracks = new List<MidiExport.MidiTrack>();
+            int firstTimeOut = -1;
+
+            foreach (var track in mid.midiTracks)
+            {
+
+                List<MidiExport.MidiMessage> midiMessages = new List<MidiExport.MidiMessage>();
+                MidiExport.MidiTrack midiNTrack = new MidiTrack();
+                midiNTrack.name = track.name;
+                foreach (var message in track.messages)
+                {
+                    if (!message.is_meta && message.type == "note_on")
+                    {
+                        if(message.noteText== " day")
+                        {
+
+                        }
+                        message.timeOrgInUsDxBeat = (int)Math.Round((message.timeOrg) / ticks, MidpointRounding.ToNegativeInfinity);
+                        if (firstTimeOut <= 0)
+                        {
+                            firstTimeOut = message.timeOrgInUsDxBeat;
+                        }
+                            message.timeOrgInUsDxBeat = message.timeOrgInUsDxBeat - firstTimeOut;
+
+                        if (!String.IsNullOrWhiteSpace(message.noteText))
+                        {
+                            midiNTrack.IsVocal = true;
+                        }
+
+                        message.timeDurationInUsDxBeat = (int)Math.Round((message.timeDurationOrg) / ticks,MidpointRounding.ToNegativeInfinity);
+                        if (message.timeDurationInUsDxBeat <= 0) message.timeDurationInUsDxBeat = 1;
+
+                        message.noteInUsDx = message.note - 60;
+                        midiNTrack.messages.Add(message);
+                    }
+                }
+                midiNTracks.Add(midiNTrack);
+            }
+            return midiNTracks;
+        }
+
         public MidiExport.MidiExport ToMidi()
         {
             var mid = new MidiExport.MidiExport();
@@ -44,7 +94,6 @@ namespace GuitarProToMidi.Native
             {
                 mid.midiTracks.Add(track.GetMidi());
             }
-
             return mid;
         }
 
@@ -59,18 +108,18 @@ namespace GuitarProToMidi.Native
             //set tempo
             ///////marker text (will be seen in file) - also Gitaro copyright blabla
             //end_of_track
-            midiHeader.messages.Add(new MidiMessage("track_name", new[] {"untitled"}, 0));
-            midiHeader.messages.Add(new MidiMessage("text", new[] {_title}, 0));
-            midiHeader.messages.Add(new MidiMessage("text", new[] {_subtitle}, 0));
-            midiHeader.messages.Add(new MidiMessage("text", new[] {_artist}, 0));
-            midiHeader.messages.Add(new MidiMessage("text", new[] {_album}, 0));
-            midiHeader.messages.Add(new MidiMessage("text", new[] {_words}, 0));
-            midiHeader.messages.Add(new MidiMessage("text", new[] {_music}, 0));
-            midiHeader.messages.Add(new MidiMessage("copyright", new[] {"Copyright 2017 by Gitaro"},
+            midiHeader.messages.Add(new MidiMessage("track_name", new[] { "untitled" }, 0));
+            midiHeader.messages.Add(new MidiMessage("text", new[] { _title }, 0));
+            midiHeader.messages.Add(new MidiMessage("text", new[] { _subtitle }, 0));
+            midiHeader.messages.Add(new MidiMessage("text", new[] { _artist }, 0));
+            midiHeader.messages.Add(new MidiMessage("text", new[] { _album }, 0));
+            midiHeader.messages.Add(new MidiMessage("text", new[] { _words }, 0));
+            midiHeader.messages.Add(new MidiMessage("text", new[] { _music }, 0));
+            midiHeader.messages.Add(new MidiMessage("copyright", new[] { "Copyright 2017 by Gitaro" },
                 0));
             midiHeader.messages.Add(new MidiMessage("marker",
-                new[] {_title + " / " + _artist + " - Copyright 2017 by Gitaro"}, 0));
-            midiHeader.messages.Add(new MidiMessage("midi_port", new[] {"0"}, 0));
+                new[] { _title + " / " + _artist + " - Copyright 2017 by Gitaro" }, 0));
+            midiHeader.messages.Add(new MidiMessage("midi_port", new[] { "0" }, 0));
 
             //Get tempos from List tempos, get key_signature and time_signature from barMaster
             var tempoIndex = 0;
@@ -84,7 +133,7 @@ namespace GuitarProToMidi.Native
             }
 
             while (tempoIndex < _tempos.Count || masterBarIndex < _barMaster.Count)
-                //Compare next entry of both possible sources
+            //Compare next entry of both possible sources
             {
                 if (tempoIndex == _tempos.Count || _tempos[tempoIndex].Position >= _barMaster[masterBarIndex].Index
                 ) //next measure comes first
@@ -93,7 +142,7 @@ namespace GuitarProToMidi.Native
                     {
                         //Add Key-Sig to midiHeader
                         midiHeader.messages.Add(new MidiMessage("key_signature",
-                            new[] {"" + _barMaster[masterBarIndex].Key, "" + _barMaster[masterBarIndex].KeyType},
+                            new[] { "" + _barMaster[masterBarIndex].Key, "" + _barMaster[masterBarIndex].KeyType },
                             _barMaster[masterBarIndex].Index - currentIndex));
                         currentIndex = _barMaster[masterBarIndex].Index;
 
@@ -117,8 +166,8 @@ namespace GuitarProToMidi.Native
                 else //next tempo signature comes first
                 {
                     //Add Tempo-Sig to midiHeader
-                    var tempo = (int) Math.Round(60 * 1000000 / _tempos[tempoIndex].Value);
-                    midiHeader.messages.Add(new MidiMessage("set_tempo", new[] {"" + tempo},
+                    var tempo = (int)Math.Round(60 * 1000000 / _tempos[tempoIndex].Value);
+                    midiHeader.messages.Add(new MidiMessage("set_tempo", new[] { "" + tempo },
                         _tempos[tempoIndex].Position - currentIndex));
                     currentIndex = _tempos[tempoIndex].Position;
                     tempoIndex++;
@@ -187,7 +236,7 @@ namespace GuitarProToMidi.Native
             myTrack.TremoloPoints.Add(new TremoloPoint(index, 0.0f)); //So that it can later be recognized as the beginning
             foreach (var bp in bend.points)
             {
-                var at = index + (int) (bp.GP6position * duration / 100.0f);
+                var at = index + (int)(bp.GP6position * duration / 100.0f);
                 var point = new TremoloPoint(at, bp.GP6value);
                 myTrack.TremoloPoints.Add(point);
             }
@@ -202,7 +251,7 @@ namespace GuitarProToMidi.Native
             var ret = new List<BendPoint>();
             foreach (var bp in bend.points)
             {
-                var at = index + (int) (bp.GP6position * duration / 100.0f);
+                var at = index + (int)(bp.GP6position * duration / 100.0f);
                 var point = new BendPoint(at, bp.GP6value);
                 ret.Add(point);
             }
@@ -211,6 +260,18 @@ namespace GuitarProToMidi.Native
         }
 
 
+        private String replaceUntilNoDifference(String lyrics, string oldValue, string newValue)
+        {
+            var lyc = lyrics.Replace(oldValue, newValue);
+            if (lyc.Equals(lyrics))
+            {
+                return lyc;
+            }
+            else
+            {
+                return replaceUntilNoDifference(lyc, oldValue, newValue);
+            }
+        }
         private List<Note> RetrieveNotes(global::Track track, int[] tuning, Track myTrack)
         {
             var notes = new List<Note>();
@@ -234,54 +295,83 @@ namespace GuitarProToMidi.Native
             }
 
             var measureIndex = -1;
+            string[] trackLyrics = null;
+            int trackLyricsIndex = 0;
+            int startMeasureIndex = -1;
             foreach (var m in track.measures)
             {
                 var notesInMeasure = 0;
+                foreach (var lyrics in track.song.lyrics)
+                {
+                    if (lyrics != null && lyrics.trackChoice == track.number)
+                    {
+                        foreach (var lyric in lyrics.lines)
+                        {
+                            if (lyric != null && !String.IsNullOrWhiteSpace(lyric.lyrics) && lyric.startingMeasure > measureIndex && lyric.startingMeasure > startMeasureIndex)
+                            {
+                                startMeasureIndex = lyric.startingMeasure;
+
+                                var lyc = replaceUntilNoDifference(lyric.lyrics,"\n\n", "\n");
+                                 lyc = replaceUntilNoDifference(lyc, "- ", " -");
+                                lyc = lyc.Replace(" -", "-");
+                                lyc = replaceUntilNoDifference(lyc, "--", "-");
+                                lyc = lyc.Replace("\n", " ");
+                                lyc = lyc.Replace("-", " -");
+
+                                trackLyrics = lyc.Split(' ');
+                                trackLyricsIndex = 0;
+
+                            }
+                        }
+
+                    }
+                }
                 measureIndex++;
                 var skipVoice = false;
+                
                 switch (m.simileMark)
                 {
                     //Repeat last measure
                     case SimileMark.simple:
-                    {
-                        var amountNotes = _notesInMeasures[^1]; //misuse prohibited by guitarpro
-                        var endPoint = notes.Count;
-                        for (var x = endPoint - amountNotes; x < endPoint; x++)
                         {
-                            var newNote = new Note(notes[x]);
-                            var oldM = track.measures[measureIndex - 1];
-                            newNote.Index += FlipDuration(oldM.header.timeSignature.denominator) *
-                                             oldM.header.timeSignature.numerator;
-                            notes.Add(newNote);
-                            notesInMeasure++;
-                        }
+                            var amountNotes = _notesInMeasures[^1]; //misuse prohibited by guitarpro
+                            var endPoint = notes.Count;
+                            for (var x = endPoint - amountNotes; x < endPoint; x++)
+                            {
+                                var newNote = new Note(notes[x]);
+                                var oldM = track.measures[measureIndex - 1];
+                                newNote.Index += FlipDuration(oldM.header.timeSignature.denominator) *
+                                                 oldM.header.timeSignature.numerator;
+                                notes.Add(newNote);
+                                notesInMeasure++;
+                            }
 
-                        skipVoice = true;
-                        break;
-                    }
+                            skipVoice = true;
+                            break;
+                        }
                     case SimileMark.firstOfDouble:
                     //Repeat first or second of last two measures
                     case SimileMark.secondOfDouble:
-                    {
-                        var secondAmount = _notesInMeasures[^1]; //misuse prohibited by guitarpro
-                        var firstAmount = _notesInMeasures[^2];
-                        var endPoint = notes.Count - secondAmount;
-                        for (var x = endPoint - firstAmount; x < endPoint; x++)
                         {
-                            var newNote = new Note(notes[x]);
-                            var oldM1 = track.measures[measureIndex - 2];
-                            var oldM2 = track.measures[measureIndex - 1];
-                            newNote.Index += FlipDuration(oldM1.header.timeSignature.denominator) *
-                                             oldM1.header.timeSignature.numerator;
-                            newNote.Index += FlipDuration(oldM2.header.timeSignature.denominator) *
-                                             oldM2.header.timeSignature.numerator;
-                            notes.Add(newNote);
-                            notesInMeasure++;
-                        }
+                            var secondAmount = _notesInMeasures[^1]; //misuse prohibited by guitarpro
+                            var firstAmount = _notesInMeasures[^2];
+                            var endPoint = notes.Count - secondAmount;
+                            for (var x = endPoint - firstAmount; x < endPoint; x++)
+                            {
+                                var newNote = new Note(notes[x]);
+                                var oldM1 = track.measures[measureIndex - 2];
+                                var oldM2 = track.measures[measureIndex - 1];
+                                newNote.Index += FlipDuration(oldM1.header.timeSignature.denominator) *
+                                                 oldM1.header.timeSignature.numerator;
+                                newNote.Index += FlipDuration(oldM2.header.timeSignature.denominator) *
+                                                 oldM2.header.timeSignature.numerator;
+                                notes.Add(newNote);
+                                notesInMeasure++;
+                            }
 
-                        skipVoice = true;
-                        break;
-                    }
+                            skipVoice = true;
+                            break;
+                        }
                     case SimileMark.none:
                         break;
                     default:
@@ -323,13 +413,13 @@ namespace GuitarProToMidi.Native
                             if (brushDirection != BeatStrokeDirection.none && notesCnt > 1)
                             {
                                 hasBrush = true;
-                                var temp = new Duration {value = b.effect.stroke.value};
+                                var temp = new Duration { value = b.effect.stroke.value };
                                 var brushTotalDuration = FlipDuration(temp);
                                 //var beatTotalDuration = flipDuration(b.duration);
 
 
                                 brushIncrease = brushTotalDuration / notesCnt;
-                                var startPos = index + subIndex + (int) ((brushTotalDuration - brushIncrease) *
+                                var startPos = index + subIndex + (int)((brushTotalDuration - brushIncrease) *
                                                                          (b.effect.stroke.startTime - 1));
                                 var endPos = startPos + brushTotalDuration - brushIncrease;
 
@@ -344,10 +434,45 @@ namespace GuitarProToMidi.Native
                                 }
                             }
                         }
-
+                        int bnotesCount = 0;
                         foreach (var n in b.notes)
                         {
-                            var note = new Note {IsTremBarVibrato = b.effect.vibrato, Fading = Fading.None};
+                            var note = new Note { IsTremBarVibrato = b.effect.vibrato, Fading = Fading.None };
+                            note.measureIndex = measureIndex;
+                            if(b.notes.Count > 1){
+
+                            }
+                            if (n.type!= NoteType.normal)
+                            {
+
+                            }
+                            if (trackLyrics != null && trackLyrics.Length > 0 && trackLyrics.Length > trackLyricsIndex && bnotesCount==0)
+                            {
+                                try
+                                {
+
+                                    note.noteText = trackLyrics[trackLyricsIndex];
+
+                                    if (!String.IsNullOrWhiteSpace(note.noteText) && (b.text == null || b.text.value.Equals("")))
+                                    {
+                                        b.text.value = note.noteText;
+                                        _annotations.Add(new Annotation(b.text.value, index + subIndex));
+                                    }
+                                    if (notesInMeasure > 0 && note.noteText != null && note.noteText.Length > 0 && !note.noteText.StartsWith("-"))
+                                    {
+                                        note.noteText = " " + trackLyrics[trackLyricsIndex];
+                                    }
+                                }catch(Exception ex)
+                                {
+
+                                }
+                                trackLyricsIndex++;
+                            }
+                            else
+                            {
+
+                            }
+                            bnotesCount++;
                             //Beat values
                             if (b.effect.fadeIn)
                             {
@@ -369,6 +494,10 @@ namespace GuitarProToMidi.Native
                             note.IsHammer = n.effect.hammer;
                             note.IsRhTapped = b.effect.slapEffect == SlapEffect.tapping;
                             note.Index = index + subIndex;
+                            if(note.Index== 290880)
+                            {
+
+                            }
                             note.Duration = FlipDuration(b.duration);
 
 
@@ -387,7 +516,7 @@ namespace GuitarProToMidi.Native
                                 {
                                     if (n.effect.harmonic.type == 2)
                                     {
-                                        note.HarmonicFret = ((ArtificialHarmonic) n.effect.harmonic).pitch
+                                        note.HarmonicFret = ((ArtificialHarmonic)n.effect.harmonic).pitch
                                             .actualOvertone;
                                     }
                                 }
@@ -443,12 +572,14 @@ namespace GuitarProToMidi.Native
                                     {
                                         dontAddNote = false;
                                     }
-
                                     if (dontAddNote)
                                     {
                                         note.Connect = true;
                                         last.Duration += note.Duration;
                                         last.AddBendPoints(note.BendPoints);
+                                        if (!String.IsNullOrEmpty(note.noteText)){
+                                            last.noteText += "+" + (note.noteText.Trim());
+                                        }
                                     }
                                 }
                             }
@@ -481,64 +612,66 @@ namespace GuitarProToMidi.Native
                                 var is8Th = b.duration.value == 8 && !b.duration.isDotted &&
                                             !b.duration.isDoubleDotted && b.duration.tuplet.enters == 1 &&
                                             b.duration.tuplet.times == 1;
-                                var is16Th = b.duration.value == 16 && !b.duration.isDotted &&
+                                var is16Th = (b.duration.value == 16) && !b.duration.isDotted &&
                                              !b.duration.isDoubleDotted && b.duration.tuplet.enters == 1 &&
                                              b.duration.tuplet.times == 1;
-
-                                switch (trip)
+                                if ((is8ThPos && is8Th) || (is16ThPos && is16Th))
                                 {
-                                    case TripletFeel.eigth when is8ThPos && is8Th:
-                                    case TripletFeel.sixteenth when is16ThPos && is16Th:
+                                    switch (trip)
                                     {
-                                        if (isFirst)
-                                        {
-                                            note.Duration = (int) (note.Duration * (4.0f / 3.0f));
-                                        }
-                                        else
-                                        {
-                                            note.Duration = (int) (note.Duration * (2.0f / 3.0f));
-                                            note.ResizeValue *= 2.0f / 3.0f;
-                                            note.Index += (int) (note.Duration * (1.0f / 3.0f));
-                                        }
+                                        case TripletFeel.eigth:
+                                        case TripletFeel.sixteenth:
+                                            {
+                                                if (isFirst)
+                                                {
+                                                    note.Duration = (int)(note.Duration * (4.0f / 3.0f));
+                                                }
+                                                else
+                                                {
+                                                    note.Duration = (int)(note.Duration * (2.0f / 3.0f));
+                                                    note.ResizeValue *= 2.0f / 3.0f;
+                                                    note.Index += (int)(note.Duration * (1.0f / 3.0f));
+                                                }
 
-                                        break;
-                                    }
-                                    case TripletFeel.dotted8th when is8ThPos && is8Th:
-                                    case TripletFeel.dotted16th when is16ThPos && is16Th:
-                                    {
-                                        if (isFirst)
-                                        {
-                                            note.Duration = (int) (note.Duration * 1.5f);
-                                        }
-                                        else
-                                        {
-                                            note.Duration = (int) (note.Duration * 0.5f);
-                                            note.ResizeValue *= 0.5f;
-                                            note.Index += (int) (note.Duration * 0.5f);
-                                        }
+                                                break;
+                                            }
+                                        case TripletFeel.dotted8th:
+                                        case TripletFeel.dotted16th:
+                                            {
+                                                if (isFirst)
+                                                {
+                                                    note.Duration = (int)(note.Duration * 1.5f);
+                                                }
+                                                else
+                                                {
+                                                    note.Duration = (int)(note.Duration * 0.5f);
+                                                    note.ResizeValue *= 0.5f;
+                                                    note.Index += (int)(note.Duration * 0.5f);
+                                                }
 
-                                        break;
-                                    }
-                                    case TripletFeel.scottish8th when is8ThPos && is8Th:
-                                    case TripletFeel.scottish16th when is16ThPos && is16Th:
-                                    {
-                                        if (isFirst)
-                                        {
-                                            note.Duration = (int) (note.Duration * 0.5f);
-                                        }
-                                        else
-                                        {
-                                            note.Duration = (int) (note.Duration * 1.5f);
-                                            note.ResizeValue *= 1.5f;
-                                            note.Index -= (int) (note.Duration * 0.5f);
-                                        }
+                                                break;
+                                            }
+                                        case TripletFeel.scottish8th:
+                                        case TripletFeel.scottish16th:
+                                            {
+                                                if (isFirst)
+                                                {
+                                                    note.Duration = (int)(note.Duration * 0.5f);
+                                                }
+                                                else
+                                                {
+                                                    note.Duration = (int)(note.Duration * 1.5f);
+                                                    note.ResizeValue *= 1.5f;
+                                                    note.Index -= (int)(note.Duration * 0.5f);
+                                                }
 
-                                        break;
+                                                break;
+                                            }
+                                        case TripletFeel.none:
+                                            break;
+                                        default:
+                                            throw new ArgumentOutOfRangeException(nameof(trip), trip, "Unknown enum value.");
                                     }
-                                    case TripletFeel.none:
-                                        break;
-                                    default:
-                                        throw new ArgumentOutOfRangeException(nameof(trip), trip, "Unknown enum value.");
                                 }
                             }
 
@@ -558,7 +691,7 @@ namespace GuitarProToMidi.Native
 
                                 var origDuration = note.Duration;
                                 note.Duration = len;
-                                note.ResizeValue *= (float) len / origDuration;
+                                note.ResizeValue *= (float)len / origDuration;
                                 var currentIndex = note.Index + len;
 
                                 lastNotes[Math.Max(0, note.Str - 1)] = note;
@@ -576,7 +709,7 @@ namespace GuitarProToMidi.Native
 
                                 while (currentIndex + len <= note.Index + origDuration)
                                 {
-                                    var newOne = new Note(note) {Index = currentIndex};
+                                    var newOne = new Note(note) { Index = currentIndex };
                                     if (!originalFret)
                                     {
                                         newOne.Fret = secondFret; //For trills
@@ -601,7 +734,7 @@ namespace GuitarProToMidi.Native
                             {
                                 var orig = note.Duration;
                                 note.Duration -= graceLength;
-                                note.ResizeValue *= (float) note.Duration / orig;
+                                note.ResizeValue *= (float)note.Duration / orig;
                                 //subIndex -= graceLength;
                                 rememberedGrace = true;
                             }
@@ -616,16 +749,19 @@ namespace GuitarProToMidi.Native
 
                                     var graceNote = new Note
                                     {
-                                        Index = note.Index, Fret = n.effect.grace.fret, Str = note.Str
+                                        Index = note.Index,
+                                        Fret = n.effect.grace.fret,
+                                        Str = note.Str
                                     };
-                                    var dur = new Duration {value = n.effect.grace.duration};
+                                    graceNote.noteText = note.noteText;
+                                    var dur = new Duration { value = n.effect.grace.duration };
                                     graceNote.Duration = FlipDuration(dur); //works at least for GP5
                                     if (isOnBeat)
                                     {
                                         var orig = note.Duration;
                                         note.Duration -= graceNote.Duration;
                                         note.Index += graceNote.Duration;
-                                        note.ResizeValue *= (float) note.Duration / orig;
+                                        note.ResizeValue *= (float)note.Duration / orig;
                                     }
                                     else
                                     {
@@ -659,23 +795,23 @@ namespace GuitarProToMidi.Native
                             if (n.type == NoteType.dead)
                             {
                                 var orig = note.Duration;
-                                note.Velocity = (int) (note.Velocity * 0.9f);
+                                note.Velocity = (int)(note.Velocity * 0.9f);
                                 note.Duration /= 6;
-                                note.ResizeValue *= (float) note.Duration / orig;
+                                note.ResizeValue *= (float)note.Duration / orig;
                             }
 
                             //Ghost Notes
                             if (n.effect.palmMute)
                             {
                                 var orig = note.Duration;
-                                note.Velocity = (int) (note.Velocity * 0.7f);
+                                note.Velocity = (int)(note.Velocity * 0.7f);
                                 note.Duration /= 2;
-                                note.ResizeValue *= (float) note.Duration / orig;
+                                note.ResizeValue *= (float)note.Duration / orig;
                             }
 
                             if (n.effect.ghostNote)
                             {
-                                note.Velocity = (int) (note.Velocity * 0.8f);
+                                note.Velocity = (int)(note.Velocity * 0.8f);
                             }
 
 
@@ -684,17 +820,17 @@ namespace GuitarProToMidi.Native
                             {
                                 var orig = note.Duration;
                                 note.Duration /= 2;
-                                note.ResizeValue *= (float) note.Duration / orig;
+                                note.ResizeValue *= (float)note.Duration / orig;
                             }
 
                             if (n.effect.accentuatedNote)
                             {
-                                note.Velocity = (int) (note.Velocity * 1.2f);
+                                note.Velocity = (int)(note.Velocity * 1.2f);
                             }
 
                             if (n.effect.heavyAccentuatedNote)
                             {
-                                note.Velocity = (int) (note.Velocity * 1.4f);
+                                note.Velocity = (int)(note.Velocity * 1.4f);
                             }
 
                             //Arpeggio / Brush
@@ -780,7 +916,7 @@ namespace GuitarProToMidi.Native
                     Num = mh.timeSignature.numerator,
                     Den = mh.timeSignature.denominator.value
                 };
-                var keyFull = "" + (int) mh.keySignature;
+                var keyFull = "" + (int)mh.keySignature;
                 if (keyFull.Length != 1)
                 {
                     mb.KeyType = int.Parse(keyFull.Substring(keyFull.Length - 1), CultureInfo.InvariantCulture);
@@ -824,7 +960,7 @@ namespace GuitarProToMidi.Native
                 float oldTempo = file.tempo;
                 foreach (var mh in file.measureHeaders)
                 {
-                    var t = new Tempo {Value = mh.tempo.value, Position = pos};
+                    var t = new Tempo { Value = mh.tempo.value, Position = pos };
                     pos += FlipDuration(mh.timeSignature.denominator) * mh.timeSignature.numerator;
                     if (Math.Abs(oldTempo - t.Value) > 0.0001)
                     {
@@ -839,7 +975,7 @@ namespace GuitarProToMidi.Native
                 var pos = 0;
 
                 //Get inital tempo from file header
-                var init = new Tempo {Position = 0, Value = file.tempo};
+                var init = new Tempo { Position = 0, Value = file.tempo };
                 if (init.Value != 0)
                 {
                     tempos.Add(init);
@@ -858,7 +994,7 @@ namespace GuitarProToMidi.Native
                         var tempo = b.effect?.mixTableChange?.tempo;
                         if (tempo != null)
                         {
-                            var t = new Tempo {Value = tempo.value, Position = pos + smallPos};
+                            var t = new Tempo { Value = tempo.value, Position = pos + smallPos };
 
                             tempos.Add(t);
                         }
@@ -892,19 +1028,19 @@ namespace GuitarProToMidi.Native
 
             if (duration.isDotted)
             {
-                result = (int) (result * 1.5f);
+                result = (int)(result * 1.5f);
             }
 
             if (duration.isDoubleDotted)
             {
-                result = (int) (result * 1.75f);
+                result = (int)(result * 1.75f);
             }
 
             var enters = duration.tuplet.enters;
             var times = duration.tuplet.times;
 
             //3:2 = standard triplet, 3 notes in the time of 2
-            result = (int) (result * times / (float) enters);
+            result = (int)(result * times / (float)enters);
 
             return result;
         }

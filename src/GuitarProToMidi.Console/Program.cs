@@ -24,8 +24,11 @@ namespace GuitarProToMidi
                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}");
             var inputFile = app.Argument("input_file", "Path to GuitarPro file");
             var verbose = app.Option("-v|--verbose", "Enable debug logs", CommandOptionType.NoValue);
+            var allExtract = app.Option("-a|--extract_all", "Enable debug logs", CommandOptionType.NoValue);
+
             var outputFile = app.Option("-o|--output <output_file>", "Optional output file path",
                 CommandOptionType.SingleValue);
+         
             var force = app.Option("-f|--force", "Overwrite output file", CommandOptionType.NoValue);
             app.OnExecute(() =>
             {
@@ -36,8 +39,8 @@ namespace GuitarProToMidi
                 }
 
                 ConfigureLogging(verbose.HasValue() ? LogLevel.Debug : LogLevel.Info);
-
-                var gpFile = new GpFileParser(inputFile.Value);
+                var gpFile = new GpFileParser(inputFile.Value, allExtract.HasValue());
+                gpFile.WriteUsDxSongFromGpFile();
                 var midiBytes = gpFile.CreateMidiFile();
                 using var fs = new FileStream(
                     outputFile.Value() ?? Path.Join(Path.GetDirectoryName(inputFile.Value),

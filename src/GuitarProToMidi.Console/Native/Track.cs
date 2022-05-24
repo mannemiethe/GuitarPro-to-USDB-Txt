@@ -21,9 +21,31 @@ namespace GuitarProToMidi.Native
         private List<int[]> _volumeChanges = new();
 
 
+        public int GetMidiNote(Note n)
+        {
+            int note;
+            if (Tuning.Length > 0)
+            {
+                note = Tuning[n.Str - 1] + Capo + n.Fret;
+            }
+            else
+            {
+                note = Capo + n.Fret;
+            }
+
+            if (n.Harmonic != HarmonicType.None) //Has Harmonics
+            {
+                var harmonicNote = GetHarmonic(Tuning[n.Str - 1], n.Fret, Capo, n.HarmonicFret, n.Harmonic);
+                note = harmonicNote;
+            }
+            return note;
+        }
+
         public MidiTrack GetMidi()
         {
             var midiTrack = new MidiTrack();
+
+            midiTrack.name = Name;
             midiTrack.messages.Add(new MidiMessage("midi_port", new[] {Port.ToString()}, 0));
             midiTrack.messages.Add(new MidiMessage("track_name", new[] {Name}, 0));
             midiTrack.messages.Add(new MidiMessage("program_change",
@@ -62,7 +84,7 @@ namespace GuitarProToMidi.Native
                         {
                             midiTrack.messages.Add(
                                 new MidiMessage("note_off",
-                                    new[] {"" + noteOff[2], "" + noteOff[1], "0"}, noteOff[0] - currentIndex));
+                                    new[] {"" + noteOff[2], "" + noteOff[1], "0"}, noteOff[0] - currentIndex, noteOff[0]));
                             currentIndex = noteOff[0];
                         }
                         else
@@ -214,7 +236,7 @@ namespace GuitarProToMidi.Native
                     {
                         midiTrack.messages.Add(
                             new MidiMessage("note_off",
-                                new[] {"" + noteOff[2], "" + noteOff[1], "0"}, noteOff[0] - currentIndex));
+                                new[] {"" + noteOff[2], "" + noteOff[1], "0"}, noteOff[0] - currentIndex, noteOff[0]));
                         currentIndex = noteOff[0];
                     }
                     else
@@ -225,13 +247,11 @@ namespace GuitarProToMidi.Native
 
                 noteOffs = temp;
 
-                int note;
 
                 if (n.Str == -2)
                 {
                     break; //Last round
                 }
-
                 if (n.Str - 1 < 0)
                 {
                     Logger.Debug("String was -1");
@@ -241,15 +261,7 @@ namespace GuitarProToMidi.Native
                 {
                     Logger.Debug("String was higher than string amount (" + n.Str + ")");
                 }
-
-                if (Tuning.Length > 0)
-                {
-                    note = Tuning[n.Str - 1] + Capo + n.Fret;
-                }
-                else
-                {
-                    note = Capo + n.Fret;
-                }
+                int note = GetMidiNote(n);
 
                 if (n.Harmonic != HarmonicType.None) //Has Harmonics
                 {
@@ -290,8 +302,9 @@ namespace GuitarProToMidi.Native
                 }
 
                 midiTrack.messages.Add(new MidiMessage("note_on",
-                    new[] {"" + noteChannel, "" + note, "" + n.Velocity}, n.Index - currentIndex));
+                    new[] {"" + noteChannel, "" + note, "" + n.Velocity}, n.Index - currentIndex, n.Index, n.Duration, n.noteText, n.measureIndex));
                 currentIndex = n.Index;
+
 
                 if (n.BendPoints.Count > 0) //Has Bending cont.
                 {

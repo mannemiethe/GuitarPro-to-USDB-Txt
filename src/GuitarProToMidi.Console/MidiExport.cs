@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 
@@ -110,6 +110,10 @@ namespace MidiExport {
     public class MidiTrack
     {
         public List<MidiMessage> messages = new List<MidiMessage>();
+
+        public String name;
+
+        public bool IsVocal { get; set; }
         public List<byte> createBytes()
         {
             List<byte> data = new List<byte>();
@@ -156,6 +160,11 @@ namespace MidiExport {
     {
         public string type = "";
         public int time = 0;
+
+        public int timeOrg = 0;
+        public int timeDurationOrg = 0;
+        public int timeOrgInUsDxBeat = 0;
+        public int timeDurationInUsDxBeat = 0;
         public bool is_meta = false;
         private byte code = 0x00;
         //MetaMessages:
@@ -189,7 +198,10 @@ namespace MidiExport {
         //Messages:
         //#########
         //note_off 0x80 (channel, note, velocity)
-        public int note = 0; public int velocity = 0;
+        public int note = 0;
+        public int velocity = 0;
+
+        public int noteInUsDx = 0;
         //note_on 0x90 (channel, note, velocity)
         //polytouch 0xa0 (channel, note, value)
         public int value = 0;
@@ -203,12 +215,22 @@ namespace MidiExport {
         //sysex 0xf0 (data)
         public byte[] data;
 
+        public string noteText;
+
+
+        public int measureIndex;
+
+
         //Others not needed..
-        public MidiMessage(string type, string[] args, int time, byte[] data = null)
+        public MidiMessage(string type, string[] args, int time, int timeOrg = 0, int timeDurationOrg = 0, string noteText = "-", int measureIndex=0, byte[] data = null)
         {
             is_meta = false;
             this.type = type;
             this.time = time;
+            this.timeOrg = timeOrg;
+            this.noteText = noteText;
+            this.timeDurationOrg = timeDurationOrg;
+            this.measureIndex=measureIndex;
 
             //Meta Messages
             if (type.Equals("sequence_number")) { is_meta = true; code = 0x00; number = int.Parse(args[0], CultureInfo.InvariantCulture); }

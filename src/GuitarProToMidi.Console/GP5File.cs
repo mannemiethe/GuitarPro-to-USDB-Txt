@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -1141,6 +1141,7 @@ public class GP5File : GPFile
         var newBeat = new Beat(voice);
         newBeat.start = start;
         voice.beats.Add(newBeat);
+
         return newBeat;
     }
 
